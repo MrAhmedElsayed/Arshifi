@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "Arshifi",
-        "width": 1000,
-        "height": 800,
+        "width": 1500,
+        "height": 600,
         "resizable": true,
         "fullscreen": false
       }

@@ -1,7 +1,7 @@
 <template>
-  <UDashboardLayout>
+  <div class="h-screen">
     <slot />
-  </UDashboardLayout>
+  </div>
 </template>
 
 <script lang="ts" setup>

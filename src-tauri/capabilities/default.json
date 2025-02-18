@@ -6,6 +6,27 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "fs:default",
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "$APPDATA/databases/*" }]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [{ "path": "$APPDATA/foo/*" }]
+    },
+    {
+      "identifier": "fs:allow-appdata-write",
+      "allow": [{ "path": "$APPDATA/foo/*" }]
+    },
+    {
+      "identifier": "fs:allow-desktop-write",
+      "allow": [{ "path": "$DESKTOP/foo/*" }]
+    },
+    {
+      "identifier": "fs:allow-desktop-write",
+      "allow": [{ "path": "$HOME/**" }]
+    }
   ]
 }
