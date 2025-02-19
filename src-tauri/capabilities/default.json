@@ -13,6 +13,9 @@
     "fs:allow-mkdir",
     "fs:allow-copy-file",
     "dialog:allow-open",
+    "sql:allow-load",
+    "sql:allow-execute",
+    "sql:allow-select",
     {
       "identifier": "fs:scope",
       "allow": [
@@ -24,6 +27,6 @@
         }
       ]
     },
-    "sql:default"
+    "shell:default"
   ]
 }
