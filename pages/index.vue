@@ -1,7 +1,7 @@
 <template>
   <UContainer class="relative h-screen">
     <UButton class="fixed top-20 start-10 mx-auto font-tajawal w-24 mt-6 text-lg" icon="i-heroicons-folder-plus"
-      size="sm" color="primary" variant="soft" label="اضافة " :trailing="false" @click="isOpen = true" />
+      size="sm" color="primary" variant="soft" label="اضافة " :trailing="false" @click="openFileSelector" />
 
     <UModal v-model="isOpen" prevent-close>
       <UCard :ui="{ ring: '', divide: 'divide-y divide-gray-100 dark:divide-gray-800' }">
@@ -17,6 +17,11 @@
         </template>
 
         <div class="font-scheherazade space-y-5 p-4">
+          <!-- Selected File Info -->
+          <div v-if="selectedFile" class="text-sm text-gray-600">
+            Selected file: {{ selectedFile.name }}
+          </div>
+
           <!-- File Name and Date -->
           <input type="text" v-model="fileName" placeholder="اسم الملف" class="w-full p-2 border" required />
           <input type="date" v-model="fileDate" placeholder="التاريخ" class="w-full p-2 border" />
@@ -45,14 +50,14 @@
           </div>
 
           <!-- Notes -->
-          <textarea v-model="notes" placeholder="ملاحظات" class="w-full p-2 border" required></textarea>
+          <textarea v-model="notes" placeholder="ملاحظات" class="w-full p-2 border" rows="3"></textarea>
         </div>
 
         <!-- Footer (Submit/Cancel buttons) -->
         <template #footer>
           <div class="flex justify-end space-x-2 p-4">
             <UButton color="gray" variant="ghost" label="الغاء" @click="isOpen = false" />
-            <UButton color="primary" variant="soft" label="حفظ" @click="saveFile" />
+            <UButton color="primary" variant="soft" label="حفظ" @click="saveFile" :disabled="!selectedFile" />
           </div>
         </template>
       </UCard>
@@ -76,10 +81,17 @@
 
       <UPageGrid>
         <ULandingCard title="القاهرة: 4 نتائج" :ui="{ title: 'text-2xl font-tajawal' }">
-          <!-- Using the description slot to insert a list -->
           <template #description>
-            please visit : https://preline.co/docs/tree-view.html npm install
-            fuse.js@^7
+            <div v-if="archivedFiles.length > 0">
+              <ul class="space-y-2">
+                <li v-for="file in archivedFiles" :key="file.path" class="p-2 hover:bg-gray-100 rounded">
+                  {{ file.name }} - {{ file.path }}
+                </li>
+              </ul>
+            </div>
+            <div v-else class="text-gray-500">
+              No archived files found
+            </div>
           </template>
         </ULandingCard>
       </UPageGrid>
@@ -88,55 +100,113 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
+// Update the import to use plugin-dialog
+import { open } from '@tauri-apps/plugin-dialog';
+import { copyFile, mkdir } from '@tauri-apps/plugin-fs';
+import { join, basename, homeDir } from '@tauri-apps/api/path';
 
-const q = ref(""); // Holds the file name
 
+const q = ref(""); // Search query
 const isOpen = ref(false);
 const fileName = ref('');
 const fileDate = ref('');
-const mainLocation = ref(''); // Main location field (المجلد الرئيسي)
+const mainLocation = ref('');
 const notes = ref('');
 const subfolders = ref<string[]>(['']);
+const selectedFile = ref<{ path: string, name: string } | null>(null);
+const archivedFiles = ref<Array<{ name: string, path: string }>>([]);
+const mainStoragePath = computed(() => localStorage.getItem('mainStoragePath') || '');
 
 // Compute the full folder structure: main location + subfolders
 const progressPath = computed(() => {
-  const segments: string[] = [];
+  if (!mainStoragePath.value) {
+    return '';
+  }
+  
+  const segments: string[] = [mainStoragePath.value];
   if (mainLocation.value.trim() !== '') {
     segments.push(mainLocation.value.trim());
   }
   segments.push(...subfolders.value.filter((folder) => folder.trim() !== ''));
-  return segments.join('/');
+  // Use proper path joining instead of string concatenation
+  return segments.join('\\').replace(/\//g, '\\');
 });
 
-// Method to add a new subfolder input.
+async function openFileSelector() {
+  try {
+    const selected = await open({
+      multiple: false,
+      directory: false, // explicitly specify we want files, not directories
+      filters: [{
+        name: 'All Files',
+        extensions: ['*']
+      }]
+    });
+    
+    if (selected && typeof selected === 'string') {
+      selectedFile.value = {
+        path: selected,
+        name: await basename(selected)
+      };
+      fileName.value = selectedFile.value.name;
+      isOpen.value = true;
+    }
+  } catch (error) {
+    console.error('Error selecting file:', error);
+  }
+}
+
 const addSubfolder = () => {
   subfolders.value.push('');
 };
 
-// Method to remove a specific subfolder input.
 const removeSubfolder = (index: number) => {
   if (subfolders.value.length > 1) {
     subfolders.value.splice(index, 1);
   }
 };
 
-// Method to handle file saving logic.
-const saveFile = () => {
-  console.log('Saving file with the following data:', {
-    fileName: fileName.value,
-    fileDate: fileDate.value,
-    mainLocation: mainLocation.value,
-    notes: notes.value,
-    folderStructure: progressPath.value,
-  });
+async function saveFile() {
+  if (!selectedFile.value) return;
+  if (!mainStoragePath.value) {
+    // Show error or notification that main storage path needs to be set
+    console.error('Please set main storage path in settings first');
+    return;
+  }
 
-  // Insert your file upload/storage logic here.
+  try {
+    const targetPath = progressPath.value;
+    
+    // Ensure directory exists with proper path
+    await mkdir(targetPath, { recursive: true });
+    
+    // Create new file path with proper path separator
+    const joinedPath = await join(targetPath, fileName.value);
+    const newPath = joinedPath.replace(/\//g, '\\');
+    
+    await copyFile(selectedFile.value.path, newPath);
 
-  // Close the modal after saving.
-  isOpen.value = false;
-};
+    // Add to archived files list
+    archivedFiles.value.push({
+      name: fileName.value,
+      path: newPath
+    });
 
-// https://v2.tauri.app/plugin/file-system/
+    // Reset form
+    selectedFile.value = null;
+    fileName.value = '';
+    fileDate.value = '';
+    mainLocation.value = '';
+    notes.value = '';
+    subfolders.value = [''];
+    
+    // Close modal
+    isOpen.value = false;
 
+    console.log('File archived successfully!');
+  } catch (error) {
+    console.error('Error archiving file:', error);
+  }
+}
 </script>

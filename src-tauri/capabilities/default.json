@@ -7,26 +7,23 @@
   ],
   "permissions": [
     "core:default",
-    "fs:default",
+    "fs:allow-read-dir",
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:allow-mkdir",
+    "fs:allow-copy-file",
+    "dialog:allow-open",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "$APPDATA/databases/*" }]
+      "allow": [
+        {
+          "path": "$DESKTOP/*"
+        },
+        {
+          "path": "$HOME/**"
+        }
+      ]
     },
-    {
-      "identifier": "fs:allow-exists",
-      "allow": [{ "path": "$APPDATA/foo/*" }]
-    },
-    {
-      "identifier": "fs:allow-appdata-write",
-      "allow": [{ "path": "$APPDATA/foo/*" }]
-    },
-    {
-      "identifier": "fs:allow-desktop-write",
-      "allow": [{ "path": "$DESKTOP/foo/*" }]
-    },
-    {
-      "identifier": "fs:allow-desktop-write",
-      "allow": [{ "path": "$HOME/**" }]
-    }
+    "sql:default"
   ]
 }
