@@ -8,7 +8,7 @@
         <h2 class="text-lg font-tajawal">مجلد التخزين الرئيسي</h2>
         <div class="flex items-center gap-3">
           <UInput
-            v-model="mainStoragePath"
+            v-model="storageStore.mainStoragePath"
             placeholder="اختر مجلد التخزين الرئيسي"
             readonly
             class="flex-1 font-scheherazade"
@@ -20,8 +20,8 @@
             class="font-tajawal"
           />
         </div>
-        <p v-if="mainStoragePath" class="text-sm text-gray-600 font-scheherazade">
-          المسار المحدد: {{ mainStoragePath }}
+        <p v-if="storageStore.mainStoragePath" class="text-sm text-gray-600 font-scheherazade">
+          المسار المحدد: {{ storageStore.mainStoragePath }}
         </p>
       </div>
     </div>
@@ -31,9 +31,11 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { open } from '@tauri-apps/plugin-dialog';
+import { useStorageStore } from '../stores/storage';
+import { Store } from '@tauri-apps/plugin-store'
 
 const db = inject<Ref<any>>('db', ref(null));
-const mainStoragePath = inject<Ref<string>>('mainStoragePath', ref(''));
+const storageStore = useStorageStore();
 
 async function selectMainStorage() {
   try {
@@ -43,14 +45,7 @@ async function selectMainStorage() {
     });
     
     if (selected && typeof selected === 'string') {
-      mainStoragePath.value = selected;
-      
-      if (db.value) {
-        await db.value.execute(
-          `INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-          ['mainStoragePath', selected]
-        );
-      }
+      await storageStore.setMainStoragePath(selected);
     }
   } catch (error) {
     console.error('Error selecting directory:', error);

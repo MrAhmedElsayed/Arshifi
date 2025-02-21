@@ -1,17 +1,32 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  // Core Configuration
   compatibilityDate: "2024-11-01",
   devtools: { enabled: true },
   ssr: false,
-  modules: ["@nuxt/ui", "@nuxtjs/google-fonts", "@vueuse/nuxt"],
-  googleFonts:{
-    families:{
+
+  // Modules
+  modules: [
+    "@nuxt/ui",
+    "@nuxtjs/google-fonts",
+    "@vueuse/nuxt",
+    '@pinia/nuxt'
+  ],
+
+  // Fonts Configuration
+  googleFonts: {
+    families: {
       Tajawal: true,
       "Scheherazade New": true,
       Alkalami: true,
     }
   },
-  devServer: { host: process.env.TAURI_DEV_HOST || 'localhost' },
+
+  // Tauri Configuration
+  devServer: { 
+    host: process.env.TAURI_DEV_HOST || 'localhost' 
+  },
+  
   vite: {
     // Better support for Tauri CLI output
     clearScreen: false,

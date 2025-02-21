@@ -24,9 +24,28 @@
         },
         {
           "path": "$HOME/**"
+        },
+        {
+          "path": "C:\\**"
+        },
+        {
+          "path": "D:\\**"
+        },
+        {
+          "path": "E:\\**"
+        },
+        {
+          "path": "F:\\**"
+        },
+        {
+          "path": "G:\\**"
+        },
+        {
+          "path": "H:\\**"
         }
       ]
     },
-    "shell:default"
+    "shell:default",
+    "store:default"
   ]
 }

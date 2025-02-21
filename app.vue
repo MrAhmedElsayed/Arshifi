@@ -21,15 +21,15 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, provide, ref } from 'vue';
+import { onMounted, provide, ref, onActivated } from 'vue';
 import Database from '@tauri-apps/plugin-sql';
-import { join } from '@tauri-apps/api/path';
-import { appDataDir } from '@tauri-apps/api/path';
+import { join, appDataDir } from '@tauri-apps/api/path';
+import { useRouter } from 'vue-router';
 
 const links = [{
   label: 'ادارة البيانات',
   icon: 'i-heroicons-book-open',
-  to: '/devices'
+  to: '/archives'
 }, {
   label: 'المستخدمين',
   icon: 'i-heroicons-rocket-launch',
@@ -41,19 +41,25 @@ const mainStoragePath = ref('');
 provide('mainStoragePath', mainStoragePath);
 
 // Create database instance
-const db = ref<any>(null);
+const db = ref<Database | null>(null);
+const dbInitialized = ref(false);
 provide('db', db);
+provide('dbInitialized', dbInitialized);
 
+interface SettingsRow {
+  value: string;
+}
+
+// Initialize database
 async function initDB() {
+  if (dbInitialized.value) return;
+  
   try {
     const appDataDirPath = await appDataDir();
     const dbPath = await join(appDataDirPath, 'archive.db');
     db.value = await Database.load(`sqlite:${dbPath}`);
     
     await db.value.execute(`
-      DROP TABLE IF EXISTS archived_files;
-      DROP TABLE IF EXISTS archive_records;
-      
       CREATE TABLE IF NOT EXISTS archive_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -84,18 +90,29 @@ async function initDB() {
     const result = await db.value.select(
       'SELECT value FROM settings WHERE key = ?',
       ['mainStoragePath']
-    );
+    ) as SettingsRow[];
     if (result.length > 0) {
       mainStoragePath.value = result[0].value;
     }
     
-    console.log('Database initialized at:', dbPath);
+    dbInitialized.value = true;
+    console.log('Database initialized successfully at:', dbPath);
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.error('Failed to initialize database:', error);
+    dbInitialized.value = false;
   }
 }
 
-onMounted(() => {
-  initDB();
+// Initialize on mount and when the app regains focus
+onMounted(initDB);
+onActivated(initDB);
+
+// Re-initialize on client-side navigation
+const router = useRouter();
+router.beforeEach(async (to, from, next) => {
+  if (!dbInitialized.value) {
+    await initDB();
+  }
+  next();
 });
 </script>
