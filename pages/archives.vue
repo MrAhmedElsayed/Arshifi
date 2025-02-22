@@ -1,8 +1,7 @@
 <template>
-  <UContainer class="my-20 w-full">
-    <UCard
-      class="w-full"
-      :ui="{
+  <UContainer class="mt-5 w-full">
+    <UCard class="w-full"
+    :ui="{
         base: '',
         ring: '',
         divide: 'divide-y divide-gray-200 dark:divide-gray-700',
@@ -15,11 +14,28 @@
       }"
     >
       <template #header>
-        <h2
-          class="font-semibold text-xl text-gray-900 dark:text-white leading-tight font-tajawal"
-        >
-          الأرشيف
-        </h2>
+        <div class="flex flex-col gap-2">
+          <div class="flex justify-between items-center">
+            <div>
+              <h2 class="font-semibold text-xl text-gray-900 dark:text-white leading-tight font-tajawal">
+                الأرشيف
+              </h2>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                إدارة وتنظيم سجلات الأرشيف الخاصة بك
+              </p>
+            </div>
+            <UButton
+              icon="i-heroicons-plus"
+              color="primary"
+              to='/'
+            >
+              إضافة سجل جديد
+            </UButton>
+          </div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            يمكنك هنا تصفح وإدارة سجلات الأرشيف الخاصة بك. استخدم الفلاتر للبحث عن سجلات محددة.
+          </p>
+        </div>
       </template>
 
       <!-- Filters -->
@@ -45,7 +61,7 @@
       <!-- Header and Action buttons -->
       <div class="flex justify-between items-center w-full px-4 py-3">
         <div class="flex items-center gap-1.5">
-          <span class="text-sm leading-5">عدد الصفوف في الصفحة:</span>
+          <span class="text-sm leading-5 font-scheherazade">عدد الصفوف في الصفحة:</span>
 
           <USelect
             v-model="pageCount"
@@ -62,7 +78,8 @@
             :options="excludeSelectColumn"
             multiple
           >
-            <UButton icon="i-heroicons-view-columns" color="gray" size="xs">
+            <UButton icon="i-heroicons-view-columns" color="gray" 
+            size="xs" class="min-w-36">
               الأعمدة
             </UButton>
           </USelectMenu>
@@ -81,15 +98,22 @@
 
       <!-- Table -->
       <UTable
-        v-model:selected="selectedRows"
+        v-model="selectedRows"
         v-model:sort="sort"
         :rows="records"
-        :columns="columns"
+        :columns="columnsTable"
         :loading="loading"
         sort-asc-icon="i-heroicons-arrow-up"
         sort-desc-icon="i-heroicons-arrow-down"
         sort-mode="manual"
         class="w-full"
+        :ui="{
+          td: {
+            base: 'max-w-[0] truncate',
+            style: 'font-family: Tajwal, sans-serif; direction: rtl;',
+          },
+          default: { checkbox: { color: 'primary' } },
+        }"
         :empty-state="{
           icon: 'i-heroicons-circle-stack',
           label: 'لا توجد سجلات',
@@ -98,57 +122,27 @@
           icon: 'i-heroicons-arrow-path',
           label: 'جاري التحميل...',
         }"
-        @select="handleSelect"
-        @sort="handleSort"
-        @select:all="onHandleSelectAll"
+        @select="select"
       >
-        <template #header-select="{ columns }">
-          <UCheckbox v-model="selectAll" @change="selectAllRows" />
-        </template>
-
-        <template #select-data="{ row }">
-          <UCheckbox v-model="row.selected" @change="toggleSelect(row)" />
-        </template>
-
-        <template #name-data="{ row }">
-          {{ row.name }}
-        </template>
-
-        <template #mainDirectory-data="{ row }">
-          {{ row.mainDirectory }}
-        </template>
-
-        <template #date-data="{ row }">
-          {{ row.date }}
-        </template>
 
         <template #filesCount-data="{ row }">
           {{ row.files?.length || 0 }} ملفات
         </template>
-
+        
         <template #actions-data="{ row }">
-          <div class="flex gap-2">
-            <UButton
+          <UButton
               icon="i-heroicons-folder-open"
               color="gray"
               variant="ghost"
               size="xs"
               @click="viewRecord(row)"
             />
-            <UButton
-              icon="i-heroicons-trash"
-              color="red"
-              variant="ghost"
-              size="xs"
-              @click="deleteRecord(row.id)"
-            />
-          </div>
         </template>
       </UTable>
 
       <!-- Footer with Pagination -->
       <template #footer>
-        <div class="flex flex-wrap justify-between items-center">
+        <div class="flex flex-wrap justify-between items-center font-scheherazade">
           <div>
             <span class="text-sm leading-5">
               عرض
@@ -309,9 +303,11 @@ const columns = [
 
 // Column selection
 const selectedColumns = ref(columns);
+
 const columnsTable = computed(() =>
   columns.filter((column) => selectedColumns.value.includes(column))
 );
+
 const excludeSelectColumn = computed(() =>
   columns.filter((v) => v.key !== "select")
 );
@@ -324,11 +320,6 @@ interface StatusOption {
 
 // Update ref type
 const selectedStatus = ref<StatusOption[]>([]);
-
-const onHandleSelectAll = (isSelected: boolean) => {
-  console.log("All rows selected:", isSelected);
-};
-
 
 // Status options for filter
 const recordStatus: StatusOption[] = [
@@ -356,33 +347,11 @@ const resetFilters = () => {
 };
 
 // Computed properties
-const selectAll = computed({
-  get: () =>
-    records.value.length > 0 &&
-    selectedRows.value.length === records.value.length,
-  set: (value: boolean) => {
-    selectedRows.value = value ? [...records.value] : [];
-  },
-});
-
-const someSelected = computed(() => {
-  return (
-    selectedRows.value.length > 0 &&
-    selectedRows.value.length < records.value.length
-  );
-});
-
 const startIndex = computed(() => (currentPage.value - 1) * pageCount.value);
 const endIndex = computed(() => {
   const end = startIndex.value + pageCount.value;
   return Math.min(end, totalRecords.value);
 });
-const totalPages = computed(() =>
-  Math.ceil(totalRecords.value / pageCount.value)
-);
-const hasMorePages = computed(
-  () => currentPage.value * pageCount.value < totalRecords.value
-);
 
 // Add a new function to check and wait for DB initialization
 async function waitForDb() {
@@ -425,7 +394,18 @@ async function loadRecords() {
       }
     }
 
-    // Update your existing query with the where clause
+    // Get total count with a separate query that doesn't join with files
+    const countQuery = `
+      SELECT COUNT(DISTINCT r.id) as total
+      FROM archive_records r
+      ${whereClause}
+    `;
+    
+    const countResult = await db.value.select(countQuery, []);
+    totalRecords.value = countResult[0].total;
+    console.log("Total unique records count:", totalRecords.value);
+
+    // Get paginated records
     const query = `
       SELECT DISTINCT
         r.id, r.name, r.date, r.main_directory, r.sub_folders, r.notes,
@@ -433,21 +413,10 @@ async function loadRecords() {
       FROM archive_records r
       LEFT JOIN archived_files f ON f.record_id = r.id
       ${whereClause}
-      ORDER BY r.${sort.value.column} ${
-      sort.value.direction === "desc" ? "DESC" : "ASC"
-    }
+      ORDER BY r.${sort.value.column} ${sort.value.direction === "desc" ? "DESC" : "ASC"}
       LIMIT ? OFFSET ?
     `;
 
-    // Get total count
-    const countResult = await db.value.select(query, [
-      pageCount.value,
-      (currentPage.value - 1) * pageCount.value,
-    ]);
-    console.log("Total records count:", countResult);
-    totalRecords.value = countResult.length;
-
-    // Get paginated records
     const rawRecords = await db.value.select(query, [
       pageCount.value,
       (currentPage.value - 1) * pageCount.value,
@@ -573,38 +542,23 @@ async function performSearch() {
   }
 }
 
-function handleSort(column: string) {
-  if (sort.value.column === column) {
-    sort.value.direction = sort.value.direction === "desc" ? "asc" : "desc";
+function select(row: SearchableRecord) {
+  const index = selectedRows.value.findIndex((item) => item.id === row.id);
+  if (index === -1) {
+    selectedRows.value.push(row);
   } else {
-    sort.value.column = column;
-    sort.value.direction = "desc";
+    selectedRows.value.splice(index, 1);
   }
-  loadRecords();
 }
 
-function toggleSelect(row: SearchableRecord) {
-  if (selectedRows.value.includes(row)) {
-    selectedRows.value = selectedRows.value.filter((r) => r !== row);
-  } else {
-    selectedRows.value.push(row);
-  }
-}
 
 function viewRecord(record: SearchableRecord) {
   selectedRecord.value = record;
   showViewModal.value = true;
 }
 
-async function deleteRecord(id: number) {
-  if (!confirm("هل أنت متأكد من حذف هذا السجل؟")) return;
-
-  try {
-    await db.value.execute("DELETE FROM archive_records WHERE id = ?", [id]);
-    await loadRecords();
-  } catch (error) {
-    console.error("Error deleting record:", error);
-  }
+async function openFile(path: string) {
+  await openFileLocation(path);
 }
 
 // Watch for changes
@@ -615,8 +569,6 @@ watch([currentPage, searchQuery], () => {
     loadRecords();
   }
 });
-
-const openFile = openFileLocation;
 
 function processSearchResults(searchResults: any[]) {
   const recordMap = new Map();
@@ -645,10 +597,6 @@ function processSearchResults(searchResults: any[]) {
   records.value = Array.from(recordMap.values());
 }
 
-function handleSelect(selection: SearchableRecord[]) {
-  selectedRows.value = selection;
-}
-
 // Add watchers for new filters
 watch([selectedStatus], () => {
   currentPage.value = 1;
@@ -665,33 +613,4 @@ watch(pageCount, () => {
 watch(currentPage, () => {
   loadRecords();
 });
-
-// Select all functionality
-function selectAllRows() {
-  selectAll.value = !selectAll.value; // Toggle select all
-}
-
-interface ActionItem {
-  key: string;
-  label: string;
-  icon: string;
-}
-
-// Define actions with the correct structure
-const actions: ActionItem[][] = [
-  [
-    {
-      key: "completed",
-      label: "تحديد كـ مكتمل",
-      icon: "i-heroicons-check",
-    },
-  ],
-  [
-    {
-      key: "uncompleted",
-      label: "تحديد كـ غير مكتمل",
-      icon: "i-heroicons-arrow-path",
-    },
-  ],
-];
 </script>
